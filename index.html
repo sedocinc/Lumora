@@ -6,9 +6,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>:root{color-scheme:light}body{margin:0;font-size:14px}[hidden]{display:none!important}img{max-width:100%}</style>
-<script src="lib/jszip.min.js"></script>
-<script src="lib/tracking-min.js"></script>
-<script src="lib/face-min.js"></script>
+<!-- Libraries: loaded from CDN first (order matters: tracking before face). Local lib/ copies are used only if the CDN fails. -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>window.JSZip||document.write('<script src="lib/jszip.min.js"><\/script>')</script>
+<script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/tracking-min.js"></script>
+<script>window.tracking||document.write('<script src="lib/tracking-min.js"><\/script>')</script>
+<script src="https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/data/face-min.js"></script>
+<script>(window.tracking&&tracking.ViolaJones&&tracking.ViolaJones.classifiers&&tracking.ViolaJones.classifiers.face)||document.write('<script src="lib/face-min.js"><\/script>')</script>
 <style>
 /* Lumora: light, airy workspace with an AI-style blue → violet → coral gradient. Amber stays reserved for crop frames. */
 :root{
@@ -518,11 +522,12 @@ async function detect(bmp){
     const cx=(x/W-.5),cy=(y/H-.5),bias=.55+.45*Math.exp(-(cx*cx+cy*cy)*5);
     let w=(grad*1.2+col*.35)*bias;w=w*w;sx+=x*w;sy+=y*w;sw+=w}
   return sw>0?[sx/sw/W,sy/sw/H]:[.5,.5]}
+function faceLibReady(){return !!(window.tracking&&tracking.ViolaJones&&tracking.ViolaJones.classifiers&&tracking.ViolaJones.classifiers.face)}
 async function findFace(bmp){
   const boxes=[],W0=bmp.width,H0=bmp.height;
   if("FaceDetector" in window){try{const r=await new window.FaceDetector({fastMode:false,maxDetectedFaces:6}).detect(bmp);
     r.forEach(x=>{const b=x.boundingBox;boxes.push({x:b.x/W0,y:b.y/H0,w:b.width/W0,h:b.height/H0})})}catch(e){}}
-  if(!boxes.length&&window.tracking&&tracking.ViolaJones&&tracking.ViolaJones.classifiers&&tracking.ViolaJones.classifiers.face){
+  if(!boxes.length&&faceLibReady()){
     try{const k=Math.min(1,480/Math.max(W0,H0)),W=Math.round(W0*k),H=Math.round(H0*k),c=document.createElement("canvas");c.width=W;c.height=H;
       const g=c.getContext("2d",{willReadFrequently:true});g.drawImage(bmp,0,0,W,H);const d=g.getImageData(0,0,W,H).data;
       const rs=tracking.ViolaJones.detect(d,W,H,1,1.25,1.5,.1,tracking.ViolaJones.classifiers.face)||[];
@@ -954,6 +959,9 @@ if(!Array.isArray(profiles)||!profiles.length)profiles=[
   {name:"4x6 Print",w:4,h:6,unit:"Inches",dpi:300,format:"JPEG",quality:95},
   {name:"Square 1080",w:1080,h:1080,unit:"Pixels",dpi:72,format:"JPEG",quality:90}];
 renderAll();
+/* library check: tell the user clearly if face detection or ZIP libraries could not load */
+if(!faceLibReady()&&!("FaceDetector" in window)){log("Face detection library did not load. Check your internet connection and reload (Ctrl+F5).",true);toast("Face detection library did not load. Check internet and reload.",6000)}
+if(typeof JSZip==="undefined")log("ZIP library did not load. Check your internet connection and reload (Ctrl+F5).",true);
 loadExamples();
 })();
 </script>
